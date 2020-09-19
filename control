@@ -1,0 +1,9 @@
+Package: com.paigu.wbjad
+Name: 微博+
+Depends: mobilesubstrate
+Version: 1.2.0
+Architecture: iphoneos-arm
+Description: (修复“我”和“关注”页面显示和点击事件错乱的问题，新增去除评论区评论广告)支持10.9.1最新版。去除启动广告、去除关注页/推荐页feed流广告、去除评论区顶部广告/评论广告、去除发现页滚动横幅、方格按钮、可开启会员功能——特别关注微博实时通知
+Maintainer: 糖醋丶炒排骨
+Author: 糖醋丶炒排骨
+Section: Tweaks

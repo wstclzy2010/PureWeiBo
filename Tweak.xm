@@ -49,7 +49,7 @@
 	if(origArr.count > 0)
 		[origArr enumerateObjectsUsingBlock:^(id model, NSUInteger idx, BOOL * _stop)
 		{
-			if([model isKindOfClass:%c(WBTrendCommentCellData)])
+			if([model isMemberOfClass:%c(WBTrendCommentCellData)])
 			{
 				NSInteger index = [origArr indexOfObject:model];
 				id adlike = [origArr objectAtIndex:index + 1];

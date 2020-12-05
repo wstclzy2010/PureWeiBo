@@ -40,7 +40,7 @@
 }
 %end
 
-%hook WBContentBaseViewModel
+%hook WBCommentViewModel
 //评论内广告评论
 - (NSMutableArray *)arrayCellModels
 {
@@ -50,7 +50,12 @@
 		[origArr enumerateObjectsUsingBlock:^(id model, NSUInteger idx, BOOL * _stop)
 		{
 			if([model isKindOfClass:%c(WBTrendCommentCellData)])
+			{
+				NSInteger index = [origArr indexOfObject:model];
+				id adlike = [origArr objectAtIndex:index + 1];
 				[adArr addObject:model];
+				[adArr addObject:adlike];
+			}
 		}];
 	
 	if(adArr.count > 0)

@@ -1,3 +1,14 @@
+@interface WBPageCard 
+@property(retain, nonatomic) NSDictionary *promotion;
+@end
+
+@interface WBPageSingleTextCard : WBPageCard
+@end
+
+@interface WBAdFlashAdView : UIView
+- (void)skipButtonPress:(id)arg1;
+@end
+
 @interface WBUniversalStatus
 @property(retain, nonatomic) NSString *statusTypeName;
 @end
@@ -5,6 +16,7 @@
 @class WBStatus;
 @interface WBStatus : WBUniversalStatus
 @end
+
 
 @interface WBPageStatusCard
 {
@@ -14,12 +26,103 @@
 @end
 
 
+
+
+%hook WBAdInfo
+- (id)initWithDBDictionary:(id)arg1
+{
+	return nil;
+}
+- (id)initWithJsonDictionary:(id)arg1
+{
+	return nil;
+}
+%end
+
+
+
+%hook WBCardListBaseItem
+//发现页面热点广告
+- (NSMutableArray *)pageCards
+{
+	//NSMutableArray *temArr = [NSMutableArray array];
+	NSMutableArray *adArr = [NSMutableArray array];
+	NSMutableArray *origArr = %orig;
+
+	if(origArr.count > 0 )
+		[origArr enumerateObjectsUsingBlock:^(id model, NSUInteger idx, BOOL * _stop)
+		{
+			if([model isKindOfClass:%c(WBPageStatusCard)])
+				if([[[model status] statusTypeName] isEqualToString:@"广告"])
+					[adArr addObject: model];
+		}];
+
+	if(adArr.count > 0)
+		[origArr removeObjectsInArray:adArr];
+
+	//origArr = [temArr mutableCopy];
+
+	return origArr;
+}
+%end
+
+
+%hook WBPageMultiCardCard
+- (NSArray *)subcards
+{
+	NSMutableArray *temArr = [NSMutableArray array];
+	NSMutableArray *adArr = [NSMutableArray array];
+	NSArray *origArr = %orig;
+
+	if(origArr.count > 0)
+		for (id model in origArr)
+			[temArr addObject:model];
+
+	if(temArr.count == 2)
+	//“我”页面广告
+		[temArr enumerateObjectsUsingBlock:^(id model, NSUInteger idx, BOOL * _stop)
+		{
+			if([model isMemberOfClass:%c(WBPageDiscoverTitleCard)])
+				if([[model title] isEqualToString:@"微公益"]
+					||[[model title] isEqualToString:@"天天领红包"])
+					[temArr removeAllObjects];
+		}];
+	
+	//WBPageDoubleTextLinkCard是顶部热搜数据card
+	[temArr enumerateObjectsUsingBlock:^(id model, NSUInteger idx, BOOL * _stop)
+	{
+		//发现页面顶部广告
+		if([model isMemberOfClass:%c(WBPageGridButtonCard)]
+			||[model isMemberOfClass:%c(WBPageSquarePhotoCard)]
+			||[model isMemberOfClass:%c(WBPageGradientAnimateCard)])//滚动广告card
+			[adArr addObject: model];
+
+		if([model isMemberOfClass:%c(WBPageSingleTextCard)])
+			if([model promotion])
+				[adArr addObject: model];	
+	}];
+
+	
+
+	if(adArr.count > 0)
+		[temArr removeObjectsInArray:adArr];
+
+	origArr = [temArr mutableCopy];
+
+	return origArr;
+}
+%end
+
+
+
+
+
 %hook WBFeedGroup
 //feed流广告
 - (id)status
 {
-	NSMutableArray *temArr = [NSMutableArray new];
-	NSMutableArray *adArr = [NSMutableArray new];
+	NSMutableArray *temArr = [NSMutableArray array];
+	NSMutableArray *adArr = [NSMutableArray array];
 	NSArray *origArr = %orig;
 
 	if(origArr.count > 0)
@@ -36,31 +139,8 @@
 	if(adArr.count > 0)
 		[temArr removeObjectsInArray:adArr];
 
-	return temArr;
-}
-%end
+	origArr = [temArr mutableCopy];
 
-%hook WBCommentViewModel
-//评论内广告评论
-- (NSMutableArray *)arrayCellModels
-{
-	NSMutableArray *origArr = %orig;
-	NSMutableArray *adArr = [NSMutableArray new];
-	if(origArr.count > 0)
-		[origArr enumerateObjectsUsingBlock:^(id model, NSUInteger idx, BOOL * _stop)
-		{
-			if([model isMemberOfClass:%c(WBTrendCommentCellData)])
-			{
-				NSInteger index = [origArr indexOfObject:model];
-				id adlike = [origArr objectAtIndex:index + 1];
-				[adArr addObject:model];
-				[adArr addObject:adlike];
-			}
-		}];
-	
-	if(adArr.count > 0)
-		[origArr removeObjectsInArray:adArr];
-	
 	return origArr;
 }
 %end
@@ -74,34 +154,39 @@
 }
 %end
 
-%hook WBAdInfo
-//启动广告
-- (id)initWithDBDictionary:(id)arg1
+%hook WBTrendCommentCell
++ (double)rowHeightOfDataObject:(id)arg1 tableView:(id)arg2
 {
-	return nil;
-}
-- (id)initWithJsonDictionary:(id)arg1
-{
-	return nil;
+	return 0;
 }
 %end
 
-%hook WBPageCardTableViewCell
-//发现页滚动横幅、方格按钮
-+ (double)rowHeightOfDataObject:(id)arg1 tableView:(id)arg2 bubbleType:(id)arg3 constraintWidth:(double)arg4 listPage:(_Bool)arg5
-{
-	if([[arg2 nextResponder] isKindOfClass:%c(WBHotWeiboSquareHitTestView)])
-	{
-		if([arg1 isKindOfClass:%c(WBPageGridButtonCard)]
-			|| [arg1 isKindOfClass:%c(WBPageGradientAnimateCard)])
-			return 0;
 
-		// if([arg1 isKindOfClass:%c(WBPageStatusCard)])
-		// 	if([[MSHookIvar<WBStatus *>(arg1, "status") statusTypeName] isEqualToString:@"广告"])
-		// 		return 0;
-	}
+
+%hook WBCommentViewModel
+//评论内广告评论
+- (NSMutableArray *)arrayCellModels
+{
+	NSMutableArray *origArr = %orig;
+	NSMutableArray *adArr = [NSMutableArray new];
+	if(origArr.count > 0)
+		for(id model in origArr)
+		{
+			if([model isMemberOfClass:%c(WBTrendCommentCellData)])
+			{
+				NSInteger index = [origArr indexOfObject:model];
+				id adlike = [origArr objectAtIndex:index+1];
+				[adArr addObject:model];
+				[adArr addObject:adlike];
+				//[origArr removeObjectAtIndex:index+1];
+			}
+				
+		}
 	
-	return %orig;
+	if(adArr.count > 0)
+		[origArr removeObjectsInArray:adArr];
+	
+	return origArr;
 }
 %end
 
